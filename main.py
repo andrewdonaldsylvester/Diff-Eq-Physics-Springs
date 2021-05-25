@@ -4,6 +4,9 @@ import math
 
 H, W = 480, 640
 
+masses = []
+springs = []
+
 root = tk.Tk()
 c = tk.Canvas(root, height=H, width=W, bg="gray")
 c.pack()
@@ -49,6 +52,9 @@ def calculate_angle(M1, M2):
 
 class Mass:
     def __init__(self, canvas, x, y, m, color="red", radius=25):
+        global masses
+        masses.append(self)
+
         self.canvas = canvas
         self.x = x
         self.y = y
@@ -84,6 +90,9 @@ class Mass:
 
 class Spring:
     def __init__(self, canvas, M1, M2, spring_const, equilibrium_length):
+        global springs
+        springs.append(self)
+
         self.canvas = canvas
 
         self.M1 = M1
@@ -108,42 +117,37 @@ class Spring:
 
     def update_physics(self, d_time):
         self.calculate_length()
-        force = - self.spring_const * (self.length - self.equilibrium_length)
+        force = - self.spring_const * abs(self.length - self.equilibrium_length)
 
         theta = calculate_angle(self.M1, self.M2)
-        # print(theta)
 
-        self.M1.ax += -force / self.M1.mass * math.cos(theta)
-        self.M1.ay += -force / self.M1.mass * math.sin(theta)
+        self.M1.ax += -force * math.cos(theta) / self.M1.mass
+        self.M1.ay += -force * math.sin(theta) / self.M1.mass
 
-        self.M2.ax += force / self.M2.mass * math.cos(theta)
-        self.M2.ay += force / self.M2.mass * math.sin(theta)
+        self.M2.ax += force * math.cos(theta) / self.M2.mass
+        self.M2.ay += force * math.sin(theta) / self.M2.mass
 
 
-m1 = Mass(c, W/2, H/2 + 100, 1)
-m2 = Mass(c, 100, H/2, 1, color="blue")
-m3 = Mass(c, 250, H/2 - 100, 1, color="green")
+m1 = Mass(c, W/2, H/2, 2, color="maroon")
+m2 = Mass(c, W/2 + 120, H/2, 1)
+m3 = Mass(c, W/2 - 50, H/2 + 170, 1)
 
-s1 = Spring(c, m2, m3, 1, 200)
-s2 = Spring(c, m1, m3, 1, 200)
-s3 = Spring(c, m1, m2, 1, 200)
+Spring(c, m1, m2, 2, 100)
+Spring(c, m2, m3, 1, 100)
+Spring(c, m1, m3, 2, 100)
 
 while True:
-    m1.update_physics(0.01)
-    m2.update_physics(0.01)
-    m3.update_physics(0.01)
+    for m in masses:
+        m.update_physics(0.01)
 
-    s1.update_physics(0.01)
-    s2.update_physics(0.01)
-    s3.update_physics(0.01)
+    for s in springs:
+        s.update_physics(0.01)
 
-    m1.draw()
-    m2.draw()
-    m3.draw()
+    for m in masses:
+        m.draw()
 
-    s1.draw()
-    s2.draw()
-    s3.draw()
+    for s in springs:
+        s.draw()
 
     root.update_idletasks()
     root.update()
