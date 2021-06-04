@@ -51,7 +51,7 @@ def calculate_angle(M1, M2):
 
 
 class Mass:
-    def __init__(self, canvas, x, y, m, color="red", radius=25):
+    def __init__(self, canvas, x, y, m, color="red", radius=25, show_forces=False):
         global masses
         masses.append(self)
 
@@ -73,9 +73,19 @@ class Mass:
                                               self.x + self.radius, H - self.y + self.radius,
                                               fill=color)
 
+        self.show_forces = show_forces
+
+        if self.show_forces:
+            self.force_arrow = self.canvas.create_line(self.x, H - self.y, self.x + self.ax * self.mass,
+                                                       H - self.y - (self.ay * self.mass), fill="green", width=10)
+
     def draw(self):
         self.canvas.coords(self.sprite, self.x - self.radius, H - self.y - self.radius,
                            self.x + self.radius, H - self.y + self.radius)
+
+        if self.show_forces:
+            self.canvas.coords(self.force_arrow, self.x, H - self.y, self.x + self.ax * self.mass, H - self.y - (self.ay * self.mass))
+
 
     def update_physics(self, d_time):
         self.x += self.vx * d_time
@@ -86,6 +96,9 @@ class Mass:
 
         self.ax = 0
         self.ay = 0
+
+    def calculate_energy(self):
+        return 1/2 * self.mass * (self.vx**2 + self.vy**2)
 
 
 class Spring:
@@ -112,12 +125,15 @@ class Spring:
             (self.M1.y - self.M2.y)**2
         )
 
+    def calculate_energy(self):
+        return 1/2 * self.spring_const * (self.length - self.equilibrium_length)**2
+
     def draw(self):
         self.canvas.coords(self.sprite, self.M1.x, H - self.M1.y, self.M2.x, H - self.M2.y)
 
     def update_physics(self, d_time):
         self.calculate_length()
-        force = - self.spring_const * abs(self.length - self.equilibrium_length)
+        force = - self.spring_const * (self.length - self.equilibrium_length)
 
         theta = calculate_angle(self.M1, self.M2)
 
@@ -128,20 +144,24 @@ class Spring:
         self.M2.ay += force * math.sin(theta) / self.M2.mass
 
 
-m1 = Mass(c, W/2, H/2, 2, color="maroon")
-m2 = Mass(c, W/2 + 120, H/2, 1)
-m3 = Mass(c, W/2 - 50, H/2 + 170, 1)
+m1 = Mass(c, W/2, H/2, 1, show_forces=False)
+m2 = Mass(c, W/2 + 120, H/2, 1, show_forces=False)
+m3 = Mass(c, W/2 - 50, H/2 + 170, 1, show_forces=False)
 
-Spring(c, m1, m2, 2, 100)
+Spring(c, m1, m2, 1, 100)
 Spring(c, m2, m3, 1, 100)
-Spring(c, m1, m3, 2, 100)
+Spring(c, m1, m3, 1, 100)
 
 while True:
+    total_energy = 0
+
     for m in masses:
         m.update_physics(0.01)
+        total_energy += m.calculate_energy()
 
     for s in springs:
         s.update_physics(0.01)
+        total_energy += s.calculate_energy()
 
     for m in masses:
         m.draw()
@@ -149,5 +169,9 @@ while True:
     for s in springs:
         s.draw()
 
+    print(total_energy)
+
     root.update_idletasks()
     root.update()
+
+    # time.sleep(0.01)
